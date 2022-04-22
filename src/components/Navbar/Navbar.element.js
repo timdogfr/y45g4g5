@@ -127,9 +127,6 @@ export const NavMenu = styled.ul`
     &:hover{
       color:var(--web-theme);
     }
-    &:active{
-      border-bottom: 3px solid #01bf71;
-    }
     
     @media screen and (max-width: 960px) {
       text-align:center;
