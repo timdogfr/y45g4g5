@@ -23,7 +23,7 @@ function Home() {
   const [supply , setTotalSupply] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [mintAmount, setMintAmount] = useState(1);
-  const [displayCost, setDisplayCost] = useState(10.00);
+  const [displayCost, setDisplayCost] = useState(10.00 MATIC);
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
     SCAN_LINK: "",
