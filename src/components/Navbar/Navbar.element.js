@@ -42,14 +42,14 @@ export const NavLogo = styled.img`
   cusror: pointer;
   display: flex;
   align-items: center;
-  margin-left: 24px;
+  margin-left: 185px;
   margin-top  : 20px;
   justify-self:flex-start;
   transition: width 0.5s;
   transition: height 0.5s;
   padding-bottom:2vh;
   @media (min-width: 767px) {
-    width: 1063px;
+    width: 1343px;
     margin-top  : 30px;
   }`;
 
