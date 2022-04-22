@@ -116,12 +116,8 @@ const Navbar = () => {
                 </NavItems>
               
                
+               
                 <NavItems style={{paddingLeft:"20px"}}>
-                  <NavLink onClick={()=>socialMedia(" https://www.instagram.com/")}>
-                    <NavIcon src={"config/images/instagram.png"}></NavIcon>
-                  </NavLink>
-                </NavItems>
-                <NavItems style={{paddingLeft:"0px"}}>
                   <NavLink onClick={()=> socialMedia(" https://discord.gg/")}>
                     <NavIcon src={"config/images/discord.png"}></NavIcon>
                   </NavLink>
