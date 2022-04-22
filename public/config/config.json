@@ -1,0 +1,18 @@
+{
+  "CONTRACT_ADDRESS": "0xf7e0ef5C46C5cF232A405Ca21a01da616a4f3dA7",
+  "SCAN_LINK": "https://mumbai.polygonscan.com/address/0xf7e0ef5C46C5cF232A405Ca21a01da616a4f3dA7",
+  "NETWORK": {
+    "NAME": "Mumbai Testnet",
+    "SYMBOL": "MATIC",
+    "ID": 80001
+  },
+  "NFT_NAME": "Toppem Sports",
+  "SYMBOL": "TMSPRTS",
+  "MAX_SUPPLY": 10000,
+  "WEI_COST": 10000000000000000000,
+  "DISPLAY_COST": 10.00,
+  "GAS_LIMIT": 285000,
+  "MARKETPLACE": "Opensea",
+  "MARKETPLACE_LINK": "https://opensea.io/collection/toppem-sports",
+  "SHOW_BACKGROUND": true
+}
