@@ -5,6 +5,8 @@ import { connect } from "../../redux/blockchain/blockchainActions";
 import { fetchData } from "./../../redux/data/dataActions";
 import { StyledButton } from "../../components/styles/button.styled";
 import { StyledRoundButton } from "./../../components/styles/styledRoundButton.styled";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchData } from "./../../redux/data/dataActions";
 import { StyledLink } from "./../../components/styles/link.styled";
 import { ResponsiveWrapper } from "./../../components/styles/responsivewrapper.styled";
 import * as s from "./../../styles/globalStyles";
@@ -14,16 +16,29 @@ import Countdown from "../../components/Countdown/Countdown";
 const truncate = (input, len) =>
   input.length > len ? `${input.substring(0, len)}...` : input;
 
+import { useDispatch, useSelector } from "react-redux";
+import { fetchData } from "./../../redux/data/dataActions";
+
+const { createAlchemyWeb3, ethers } = require("@alch/alchemy-web3");
+var Web3 = require('web3');
+var Contract = require('web3-eth-contract');
 function Home() {
+
   const dispatch = useDispatch();
   const blockchain = useSelector((state) => state.blockchain);
   const data = useSelector((state) => state.data);
   const [claimingNft, setClaimingNft] = useState(false);
   const [mintDone, setMintDone] = useState(false);
-  const [supply , setTotalSupply] = useState(0);
+  const [supply, setTotalSupply] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [mintAmount, setMintAmount] = useState(1);
-  const [displayCost, setDisplayCost] = useState(0.10);
+  const [displayCost, setDisplayCost] = useState(0);
+  const [state, setState] = useState(-1);
+  const [nftCost, setNftCost] = useState(-1);
+  const [_whitelist, setCanMintwhitelist] = useState(false);
+  const [canMintOG, setCanMintOG] = useState(false);
+  const [disable, setDisable] = useState(false);
+  const [max, setMax] = useState(0);
   const [CONFIG, SET_CONFIG] = useState({
     CONTRACT_ADDRESS: "",
     SCAN_LINK: "",
@@ -44,13 +59,15 @@ function Home() {
   });
 
   const claimNFTs = () => {
-    let cost = CONFIG.WEI_COST;
+    let cost = nftCost;
+    cost = Web3.utils.toWei(String(cost), "ether");
+
     let gasLimit = CONFIG.GAS_LIMIT;
     let totalCostWei = String(cost * mintAmount);
     let totalGasLimit = String(gasLimit * mintAmount);
-   
+    setFeedback(`Minting your ${CONFIG.NFT_NAME}`);
     setClaimingNft(true);
-    setFeedback(`Confirm Your Transaction In Wallet!!!`);
+    setDisable(true);
     blockchain.smartContract.methods
       .mint(mintAmount)
       .send({
@@ -66,17 +83,19 @@ function Home() {
       })
       .then((receipt) => {
         setMintDone(true);
-        setFeedback(
-          `Done, the ${CONFIG.NFT_NAME} NFT is yours!`
-        );
-        // setClaimingNft(false);
-        blockchain.smartContract.methods.totalSupply().call().then(res => {
-          setTotalSupply(res);
-        });
-        
+        setFeedback(`Done, the ${CONFIG.NFT_NAME} is yours!`);
+        setClaimingNft(false);
+        blockchain.smartContract.methods
+          .totalSupply()
+          .call()
+          .then((res) => {
+            setTotalSupply(res);
+          });
+
         dispatch(fetchData(blockchain.account));
       });
   };
+
 
   const decrementMintAmount = () => {
     let newMintAmount = mintAmount - 1;
@@ -84,30 +103,112 @@ function Home() {
       newMintAmount = 1;
     }
     setMintAmount(newMintAmount);
-    setDisplayCost(parseFloat(CONFIG.DISPLAY_COST * newMintAmount).toFixed(2));
+    setDisplayCost(
+      parseFloat(nftCost * newMintAmount).toFixed(2)
+    );
   };
 
   const incrementMintAmount = () => {
     let newMintAmount = mintAmount + 1;
-    if (newMintAmount > 10) {
-      newMintAmount = 10;
-    }
+    newMintAmount > max
+      ? (newMintAmount = max)
+      : newMintAmount;
+    setDisplayCost(
+      parseFloat(nftCost * newMintAmount).toFixed(2)
+    );
     setMintAmount(newMintAmount);
-    setDisplayCost(parseFloat(CONFIG.DISPLAY_COST * newMintAmount).toFixed(2));
   };
 
   const maxNfts = () => {
-    setMintAmount(10);
-    setDisplayCost(parseFloat(CONFIG.DISPLAY_COST * 10).toFixed(2));
+    setMintAmount(max);
+
+    setDisplayCost(
+      parseFloat(nftCost * max).toFixed(2)
+    );
+
   };
 
   const getData = async () => {
     if (blockchain.account !== "" && blockchain.smartContract !== null) {
       dispatch(fetchData(blockchain.account));
-      const totalSupply =  await blockchain.smartContract.methods.totalSupply().call();
-      setTotalSupply(totalSupply);
+      if (state == 1) {
+        let mintWL = await blockchain.smartContract.methods
+          .isWhitelisted(blockchain.account)
+          .call();
+        setCanMintWL(mintWL);
+        mintWL ? "" : setFeedback(`You are not WhiteListed Member!!!`);
+        mintWL ? setDisable(false) : setDisable(true);
+      }
     }
   };
+
+  const getDataWithAlchemy = async () => {
+    const web3 = createAlchemyWeb3("https://eth-rinkeby.alchemyapi.io/v2/X2FqYRyBBfbSOGOo36-VcbhuM9L5bH3T");
+    const abiResponse = await fetch("/config/abi.json", {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const abi = await abiResponse.json();
+    var contract = new Contract(abi, '0xc81a1ADEBFdfA15550698bd42851060a8cf4cDCf');
+    contract.setProvider(web3.currentProvider);
+    console.log(contract);
+    // Get Total Supply
+    const totalSupply = await contract.methods
+      .totalSupply()
+      .call();
+    setTotalSupply(totalSupply);
+
+    // Get Contract State
+    let currentState = await contract.methods
+      .currentState()
+      .call();
+    setState(currentState);
+
+    console.log(currentState);
+
+    // Set Price and Max According to State
+
+    if (currentState == 0) {
+      setFeedback("Mint is not Live Yet!!!");
+      setDisable(true);
+      setDisplayCost(0.00);
+      setMax(0);
+    }
+    else if (currentState == 1) {
+      let wlCost = await contract.methods
+        .costWL()
+        .call();
+      setDisplayCost(web3.utils.fromWei(wlCost));
+      setNftCost(web3.utils.fromWei(wlCost));
+      console.log(wlCost);
+      setFeedback("Are you WhiteListed Member?");
+
+      let wlMax = await contract.methods
+        .maxMintAmountWL()
+        .call();
+      setMax(wlMax);
+    }
+    else {
+      let puCost = await contract.methods
+        .cost()
+        .call();
+      setDisplayCost(web3.utils.fromWei(puCost));
+      setNftCost(web3.utils.fromWei(puCost));
+
+      let puMax = await contract.methods
+        .maxMintAmount()
+        .call();
+      setMax(puMax);
+    }
+
+
+
+
+
+
+  }
 
   const getConfig = async () => {
     const configResponse = await fetch("/config/config.json", {
@@ -118,72 +219,44 @@ function Home() {
     });
     const config = await configResponse.json();
     SET_CONFIG(config);
-
   };
 
   useEffect(() => {
     getConfig();
+    getDataWithAlchemy();
   }, []);
 
   useEffect(() => {
     getData();
   }, [blockchain.account]);
 
-  let countDownDate = new Date("Feb 12, 2022 20:00:00 GMT -6:00").getTime();
-
-  let now = new Date().getTime();
-
-  let timeleft = countDownDate - now;
-
-  const [days, setDays] = useState();
-  const [hours, setHour] = useState();
-  const [minutes, setMint] = useState();
-  const [seconds, setSec] = useState();
-
-  useEffect(() => {
-      const interval = setInterval(() => {
-        setDays(Math.floor(timeleft / (1000 * 60 * 60 * 24)));
-        setHour(
-          Math.floor((timeleft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        );
-        setMint(Math.floor((timeleft % (1000 * 60 * 60)) / (1000 * 60)));
-        setSec(Math.floor((timeleft % (1000 * 60)) / 1000));
-      }, 1000);
-      return () => clearInterval(interval);
-    }, [days, hours, minutes, seconds]);
-
   return (
     <>
-  <s.Body >
-      <Navbar />
-      <HeroSection />
 
-      {days > -1 && hours > -1 && minutes > -1 && seconds > -1 && (
-        <Countdown />
-
-      ) }
-     
-      <s.FlexContainer
-        flex={1}
-        jc={"space-evenly"}
-        ai={"center"}
-        fd={"row"}
-        mt={"-65vh"}
-        style={{
-          zIndex: "1",
-         
-        }}
-      >
+      <s.FlexContainer jc={"center"} ai={"center"} fd={"row"}>
         <s.Mint>
-          <s.Image src={"config/images/mint_nft.png"} wid={70} />
-          <s.TextSubTitle size={1.4}>{10000-supply} of 10000 NFT's Available</s.TextSubTitle>
+          <s.TextTitle
+            size={6.0}
+            style={{
+              letterSpacing: "3px",
+
+            }}
+          >
+            MINT NOW
+          </s.TextTitle>
+          <s.SpacerSmall />
+          <s.TextSubTitle size={1.4}>
+            {CONFIG.MAX_SUPPLY - supply} of {CONFIG.MAX_SUPPLY} NFT's Available
+          </s.TextSubTitle>
           <s.SpacerLarge />
           <s.SpacerLarge />
 
           <s.FlexContainer fd={"row"} ai={"center"} jc={"space-between"}>
             <s.TextTitle>Amount</s.TextTitle>
-            <s.AmountContainer ai={"center"} jc={"space-between"} fd={"row"}>
+
+            <s.AmountContainer ai={"center"} jc={"center"} fd={"row"}>
               <StyledRoundButton
+                style={{ lineHeight: 0.4 }}
                 disabled={claimingNft ? 1 : 0}
                 onClick={(e) => {
                   e.preventDefault();
@@ -193,7 +266,7 @@ function Home() {
                 -
               </StyledRoundButton>
               <s.SpacerMedium />
-              <s.TextDescription  size={"1.8rem"}>
+              <s.TextDescription color={"var(--primary)"} size={"2.5rem"}>
                 {mintAmount}
               </s.TextDescription>
               <s.SpacerMedium />
@@ -209,7 +282,7 @@ function Home() {
             </s.AmountContainer>
 
             <s.maxButton
-            style={{cursor:"pointer"}}
+              style={{ cursor: "pointer" }}
               onClick={(e) => {
                 e.preventDefault();
                 maxNfts();
@@ -218,71 +291,90 @@ function Home() {
               Max
             </s.maxButton>
           </s.FlexContainer>
-          
-          <s.TextSubTitle style={{marginTop:"10px"}} size={0.9}  align={"right"} >
-            Max 10
-          </s.TextSubTitle>
+
           <s.SpacerSmall />
           <s.Line />
           <s.SpacerLarge />
           <s.FlexContainer fd={"row"} ai={"center"} jc={"space-between"}>
             <s.TextTitle>Total</s.TextTitle>
-            <s.TextTitle>{displayCost}</s.TextTitle>
+            <s.TextTitle color={"var(--primary)"}>{displayCost}</s.TextTitle>
           </s.FlexContainer>
           <s.SpacerSmall />
           <s.Line />
           <s.SpacerSmall />
-
-          {blockchain.account !== "" && blockchain.smartContract !== null ? (
-          <s.Container ai={"center"} jc={"center"} fd={"row"}>
-            <s.connectButton
-              disabled={claimingNft ? 1 : 0}
-              onClick={(e) => {
-                e.preventDefault();
-                claimNFTs();
-                getData();
-              }}
-            >
-              {" "}
-              {claimingNft ? feedback : "Mint"}{" "}
-             
-            </s.connectButton>{" "}
-           
-          </s.Container>
+          <s.SpacerLarge />
+          {blockchain.account !== "" &&
+            blockchain.smartContract !== null &&
+            blockchain.errorMsg === "" ? (
+            <s.Container ai={"center"} jc={"center"} fd={"row"}>
+              <s.connectButton
+                disabled={disable}
+                onClick={(e) => {
+                  e.preventDefault();
+                  claimNFTs();
+                  getData();
+                }}
+              >
+                {" "}
+                {claimingNft ? "Confirm Transaction in Wallet" : "Mint"}{" "}
+                {mintDone ? feedback : ""}{" "}
+              </s.connectButton>{" "}
+            </s.Container>
           ) : (
-            <s.connectButton
-                      style={{
-                        textAlign: "center",
-                        color: "var(--web-theme)",
-                        cursor:"pointer",
-                      }}
-                      onClick={(e) => {
-                          e.preventDefault();
-                          dispatch(connect());
-                          getData();
-                        }}
-                    >
-                      Connect to Wallet
-                    </s.connectButton>
+            <>
+              {/* {blockchain.errorMsg === "" ? ( */}
+              <s.connectButton
+                style={{
+                  textAlign: "center",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+                disabled={state == 0 ? 1 : 0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  dispatch(connectWallet());
+                  getData();
+                }}
+              >
+                Connect to Wallet
+              </s.connectButton>
+              {/* ) : ("")} */}
+            </>
           )}
-
+          <s.SpacerLarge />
           {blockchain.errorMsg !== "" ? (
             <s.connectButton
-                      style={{
-                        textAlign: "center",
-                        color: "var(--web-theme)",
-                        cursor:"pointer",
-                      }}
-                    >
-                       {blockchain.errorMsg}
-                    </s.connectButton>
-          ) : ("")}
+              style={{
+                textAlign: "center",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              {blockchain.errorMsg}
+            </s.connectButton>
+          ) : (
+            ""
+          )}
 
+          { canMintWL !== true &&
+            (state == 1) ? (
+            <s.connectButton
+              style={{
+                textAlign: "center",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              {feedback}
+            </s.connectButton>
+          ) : (
+            ""
+          )} 
         </s.Mint>
       </s.FlexContainer>
-      </s.Body>
+
+
     </>
-    
   );
 }
 
