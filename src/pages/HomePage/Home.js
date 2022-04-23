@@ -21,7 +21,6 @@ var Web3 = require('web3');
 var Contract = require('web3-eth-contract');
 function Home() {
 
-  const dispatch = useDispatch();
   const blockchain = useSelector((state) => state.blockchain);
   const data = useSelector((state) => state.data);
   const [claimingNft, setClaimingNft] = useState(false);
