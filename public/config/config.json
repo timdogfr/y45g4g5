@@ -2,9 +2,9 @@
   "CONTRACT_ADDRESS": "0x98A59408CD1d24f733fc75Fed337C514cb43Ed57",
   "SCAN_LINK": "https://mumbai.polygonscan.com/address/0x98A59408CD1d24f733fc75Fed337C514cb43Ed57",
   "NETWORK": {
-    "NAME": "Mumbai Testnet",
-    "SYMBOL": "MATIC",
-    "ID": 80001
+    "NAME": "Avalanche FUJI C-Chain",
+    "SYMBOL": "AVAX",
+    "ID": 43113
   },
   "NFT_NAME": "Toppem Sports",
   "SYMBOL": "TMSPRTS",
