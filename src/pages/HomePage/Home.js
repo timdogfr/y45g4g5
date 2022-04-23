@@ -16,9 +16,6 @@ import Countdown from "../../components/Countdown/Countdown";
 const truncate = (input, len) =>
   input.length > len ? `${input.substring(0, len)}...` : input;
 
-import { useDispatch, useSelector } from "react-redux";
-import { fetchData } from "./../../redux/data/dataActions";
-
 const { createAlchemyWeb3, ethers } = require("@alch/alchemy-web3");
 var Web3 = require('web3');
 var Contract = require('web3-eth-contract');
